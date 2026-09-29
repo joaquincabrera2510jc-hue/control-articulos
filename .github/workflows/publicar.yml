@@ -56,7 +56,7 @@ jobs:
         if: steps.version.outputs.existe == 'no'
         shell: bash
         run: |
-          for f in $(git ls-files '*.b64'); do base64 -d "$f" > "${f%.b64}"; done
+          for f in $(git ls-files '*.b64'); do tr -d '\r\n ' < "$f" | base64 -d > "${f%.b64}"; done
           python -m pip install --quiet pillow
           python build/make_icon.py
           ls -la build src
