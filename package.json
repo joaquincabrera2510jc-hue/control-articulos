@@ -1,0 +1,50 @@
+{
+  "name": "control-articulos",
+  "productName": "Control de Artículos",
+  "version": "1.0.0",
+  "description": "Control de stock, pedidos y taller — López Motors",
+  "author": "López Motors",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.45.4",
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "uy.lopezmotors.controlarticulos",
+    "productName": "Control de Artículos",
+    "copyright": "López Motors",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "preload.js", "src/**/*", "build/icon.ico", "package.json"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.ico",
+      "artifactName": "Control-de-Articulos-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Control de Artículos",
+      "uninstallDisplayName": "Control de Artículos",
+      "language": "3082"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "joaquincabrera2510jc-hue",
+      "repo": "control-articulos",
+      "releaseType": "release"
+    }
+  }
+}
