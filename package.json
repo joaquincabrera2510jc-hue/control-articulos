@@ -1,7 +1,7 @@
 {
   "name": "control-articulos",
-  "productName": "Control de Artículos",
-  "version": "1.0.1",
+  "productName": "López Motors",
+  "version": "1.0.2",
   "description": "Control de stock, pedidos y taller — López Motors",
   "author": "López Motors",
   "license": "UNLICENSED",
@@ -21,14 +21,14 @@
   },
   "build": {
     "appId": "uy.lopezmotors.controlarticulos",
-    "productName": "Control de Artículos",
+    "productName": "López Motors",
     "copyright": "López Motors",
     "directories": { "output": "dist", "buildResources": "build" },
     "files": ["main.js", "preload.js", "src/**/*", "build/icon.ico", "package.json"],
     "win": {
       "target": [{ "target": "nsis", "arch": ["x64"] }],
       "icon": "build/icon.ico",
-      "artifactName": "Control-de-Articulos-Setup-${version}.${ext}"
+      "artifactName": "Lopez-Motors-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -36,8 +36,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Control de Artículos",
-      "uninstallDisplayName": "Control de Artículos",
+      "shortcutName": "López Motors",
+      "uninstallDisplayName": "López Motors",
       "language": "3082"
     },
     "publish": {
