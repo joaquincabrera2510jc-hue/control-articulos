@@ -8,6 +8,10 @@ try { ({ autoUpdater } = require("electron-updater")); } catch (e) { /* en desar
 
 let win = null;
 
+// Windows arma el "user agent" con el nombre del programa, que tiene tilde ("Artículos"),
+// y Supabase no puede guardar la sesión con ese texto. Se deja solo en caracteres simples.
+app.userAgentFallback = app.userAgentFallback.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7E]/g, "");
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
