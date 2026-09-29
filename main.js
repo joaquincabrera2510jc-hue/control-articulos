@@ -23,7 +23,7 @@ function enviar(canal, datos) { if (win && !win.isDestroyed()) win.webContents.s
 function crearVentana() {
   win = new BrowserWindow({
     width: 1280, height: 860, minWidth: 380, minHeight: 500,
-    title: "Control de Artículos — López Motors",
+    title: "López Motors",
     backgroundColor: "#0b0c0d",
     icon: path.join(__dirname, "build", "icon.ico"),
     autoHideMenuBar: true,
