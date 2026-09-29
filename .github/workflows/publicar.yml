@@ -69,4 +69,4 @@ jobs:
         if: steps.version.outputs.existe == 'no'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win --publish always -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }}
+        run: npx electron-builder --win --publish always
