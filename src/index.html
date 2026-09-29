@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co">
+<title>Control de Artículos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,700;1,800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="auth dark-zone" id="auth">
+  <form class="authcard" id="formAuth" novalidate>
+    <img class="logo" src="logo.png" alt="López Motors">
+    <p class="apptitle">Control de artículos</p>
+    <p class="sub" id="authSub">Ingresá con tu usuario y contraseña.</p>
+    <label class="f" id="aUserWrap">Usuario<input id="aUser" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+    <label class="f" id="aPassWrap">Contraseña<input id="aPass" type="password" autocomplete="current-password"></label>
+    <p class="err" id="authErr"></p>
+    <button class="btn primary" type="submit" id="authBtn">Ingresar</button>
+    <p class="hint net" id="authNet"><span class="dot"></span><span id="authNetTxt">Comprobando conexión…</span></p>
+    <p class="hint ver" id="authVer"></p>
+  </form>
+</div>
+
+<div id="app" hidden>
+<div class="brandbar dark-zone"><div class="in">
+  <img src="logo.png" alt="López Motors">
+  <div class="r">
+    <button class="who-chip" id="btnUser" type="button" title="Cambiar mi contraseña"><b id="whoName"></b><small id="whoRol"></small></button>
+    <button class="btn" id="btnSalir" type="button">Salir</button>
+  </div>
+</div></div>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 class="apptitle">Control de artículos</h1>
+      <p class="sub" id="appSub">Stock, pedidos de clientes y compras a proveedores, compartido en tiempo real.</p>
+    </div>
+    <div class="bar">
+      <button class="btn" id="btnExcel" type="button">Descargar Excel</button>
+      <button class="btn primary" id="btnNuevo" type="button">+ Nuevo artículo</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="stats" id="stats" aria-label="Resumen">
+    <div class="stat"><small>Artículos</small><b id="stProd">0</b></div>
+    <div class="stat"><small>Unidades en stock</small><b id="stUnid">0</b></div>
+    <div class="stat" id="stSinBox"><small>Sin stock</small><b id="stSin">0</b></div>
+    <div class="stat"><small>Pedidos clientes abiertos</small><b id="stCli">0</b></div>
+    <div class="stat"><small>Compras por recibir</small><b id="stProv">0</b></div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-stock" aria-selected="true" data-tab="stock">Stock</button>
+    <button role="tab" id="tab-pedidos" aria-selected="false" data-tab="pedidos">Pedidos</button>
+    <button role="tab" id="tab-movs" aria-selected="false" data-tab="movs">Movimientos</button>
+    <button role="tab" id="tab-usuarios" aria-selected="false" data-tab="usuarios" hidden>Usuarios</button>
+  </nav>
+
+  <!-- STOCK -->
+  <section id="pane-stock" class="pane" style="display:flex;flex-direction:column;gap:12px">
+    <div class="bar">
+      <input class="grow" id="qStock" type="search" placeholder="Buscar por código, artículo, marca o vehículo…">
+      <select id="fVeh" style="width:auto" aria-label="Marca del vehículo"></select>
+      <select id="fCat" style="width:auto" aria-label="Categoría"></select>
+    </div>
+    <div id="stockBody"></div>
+    <div id="misSal"></div>
+  </section>
+
+  <!-- PEDIDOS -->
+  <section id="pane-pedidos" class="pane" hidden style="display:flex;flex-direction:column;gap:12px">
+    <div class="bar">
+      <div class="chips" id="fTipo">
+        <button class="chip" type="button" data-v="todos" aria-pressed="true">Todos</button>
+        <button class="chip" type="button" data-v="cliente" aria-pressed="false">De clientes</button>
+        <button class="chip" type="button" data-v="proveedor" aria-pressed="false">A proveedores</button>
+      </div>
+      <label style="display:flex;gap:6px;align-items:center;color:var(--muted)"><input type="checkbox" id="fAbiertos" checked style="width:auto"> Solo abiertos</label>
+      <input class="grow" id="qPed" type="search" placeholder="Buscar por número, cliente, proveedor o artículo…">
+      <button class="btn primary" id="btnPedido" type="button">+ Nuevo pedido</button>
+    </div>
+    <div id="pedBody"></div>
+  </section>
+
+  <!-- MOVIMIENTOS -->
+  <section id="pane-movs" class="pane" hidden style="display:flex;flex-direction:column;gap:12px">
+    <div class="bar">
+      <input class="grow" id="qMov" type="search" placeholder="Filtrar por artículo, motivo o pedido…">
+      <div class="chips" id="fMov">
+        <button class="chip" type="button" data-v="todos" aria-pressed="true">Todos</button>
+        <button class="chip" type="button" data-v="entrada" aria-pressed="false">Entradas</button>
+        <button class="chip" type="button" data-v="salida" aria-pressed="false">Salidas</button>
+        <button class="chip" type="button" data-v="ajuste" aria-pressed="false">Ajustes</button>
+      </div>
+    </div>
+    <div id="movBody"></div>
+  </section>
+
+  <!-- USUARIOS -->
+  <section id="pane-usuarios" class="pane" hidden style="display:flex;flex-direction:column;gap:12px">
+    <div class="bar">
+      <p class="hint grow">Administrador: todo, incluido gestionar usuarios. Operador: carga stock y pedidos. Taller: solo busca artículos y les da salida (puede deshacer sus salidas de las últimas 24 h). Solo consulta: mira sin modificar.</p>
+      <button class="btn primary" id="btnUsr" type="button">+ Nuevo usuario</button>
+    </div>
+    <div id="usrBody"></div>
+  </section>
+</div>
+
+</div>
+
+<!-- Modal artículo -->
+<dialog id="dlgProd">
+  <form class="dlg" id="formProd" novalidate>
+    <h2 id="prodTitle">Nuevo artículo</h2>
+    <div class="grid2">
+      <label class="f">Código / Nº de parte<input id="pCodigo" autocomplete="off" placeholder="Ej. 04465-0K240"></label>
+      <label class="f">Categoría<select id="pCat"></select></label>
+      <label class="f full">Artículo *<input id="pNombre" required autocomplete="off" placeholder="Ej. Pastillas de freno delanteras"></label>
+      <label class="f">Marca del artículo<input id="pMarca" autocomplete="off" placeholder="Ej. Bosch"></label>
+      <label class="f">Ubicación<input id="pUbic" autocomplete="off" placeholder="Ej. Estante B3"></label>
+      <label class="f">Marca del vehículo<input id="pVehMarca" list="dlVehMarcas" autocomplete="off" placeholder="Ej. Toyota"></label>
+      <label class="f">Modelo del vehículo<input id="pVehModelo" autocomplete="off" placeholder="Ej. Hilux 2016–2022"></label>
+      <label class="f" id="pStockWrap">Stock inicial<input id="pStock" type="number" min="0" step="1" value="0"></label>
+    </div>
+    <p class="err" id="prodErr"></p>
+    <div class="foot">
+      <button class="btn danger" type="button" id="prodDel" hidden>Eliminar</button>
+      <div class="r">
+        <button class="btn" type="button" data-close>Cancelar</button>
+        <button class="btn primary" type="submit" id="prodSave">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Modal movimiento -->
+<dialog id="dlgMov">
+  <form class="dlg" id="formMov" novalidate>
+    <h2>Mover stock</h2>
+    <p class="hint" id="movInfo"></p>
+    <div class="seg" role="radiogroup">
+      <label><input type="radio" name="mtipo" value="entrada" checked>Entrada</label>
+      <label><input type="radio" name="mtipo" value="salida">Salida</label>
+      <label><input type="radio" name="mtipo" value="ajuste">Ajuste (conteo)</label>
+    </div>
+    <div class="grid2">
+      <label class="f" id="mCantLbl">Cantidad<input id="mCant" type="number" min="0" step="1" value="1"></label>
+      <label class="f">Motivo<input id="mMotivo" autocomplete="off" placeholder="Ej. Compra mostrador, uso en taller…"></label>
+    </div>
+    <p class="err" id="movErr"></p>
+    <div class="foot"><div class="r">
+      <button class="btn" type="button" data-close>Cancelar</button>
+      <button class="btn primary" type="submit" id="movSave">Registrar</button>
+    </div></div>
+  </form>
+</dialog>
+
+<!-- Modal pedido -->
+<dialog id="dlgPed">
+  <form class="dlg" id="formPed" novalidate>
+    <h2 id="pedTitle">Nuevo pedido</h2>
+    <div class="seg" role="radiogroup" id="pedTipoSeg">
+      <label><input type="radio" name="ptipo" value="cliente" checked>Pedido de cliente</label>
+      <label><input type="radio" name="ptipo" value="proveedor">Compra a proveedor</label>
+    </div>
+    <div class="grid2">
+      <label class="f"><span id="lblContacto">Cliente *</span><input id="oContacto" autocomplete="off"></label>
+      <label class="f">Teléfono<input id="oTel" autocomplete="off" inputmode="tel"></label>
+      <label class="f">Fecha estimada<input id="oFecha" type="date"></label>
+      <label class="f">Estado<select id="oEstado"></select></label>
+    </div>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:12px;font-weight:600;color:var(--muted)">Artículos del pedido</span>
+      <div class="items" id="oItems"></div>
+      <button class="btn sm" type="button" id="oAddItem" style="align-self:flex-start">+ Agregar artículo</button>
+      <p class="hint" id="oHint"></p>
+    </div>
+    <label class="f">Notas<textarea id="oNotas" placeholder="Seña, vehículo del cliente, nº de factura del proveedor…"></textarea></label>
+    <ul class="timeline" id="oTimeline"></ul>
+    <p class="err" id="pedErr"></p>
+    <div class="foot">
+      <button class="btn danger" type="button" id="pedDel" hidden>Eliminar</button>
+      <div class="r">
+        <button class="btn" type="button" data-close>Cancelar</button>
+        <button class="btn primary" type="submit" id="pedSave">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Modal usuario -->
+<dialog id="dlgUsr">
+  <form class="dlg" id="formUsr" novalidate>
+    <h2 id="usrTitle">Nuevo usuario</h2>
+    <div class="grid2">
+      <label class="f full">Nombre y apellido *<input id="uNombre" autocomplete="off"></label>
+      <label class="f">Usuario *<input id="uUser" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Ej. mgarcia"></label>
+      <label class="f">Rol<select id="uRol"><option value="operador">Operador</option><option value="taller">Taller</option><option value="lectura">Solo consulta</option><option value="admin">Administrador</option></select></label>
+      <label class="f"><span id="uPassLbl">Contraseña *</span><input id="uPass" type="password" autocomplete="new-password"></label>
+      <label class="f">Repetir contraseña<input id="uPass2" type="password" autocomplete="new-password"></label>
+      <label class="f full" id="uActivoWrap" style="flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--fg)"><input id="uActivo" type="checkbox" style="width:auto" checked> Usuario activo (puede ingresar)</label>
+    </div>
+    <p class="hint">El usuario lleva de 3 a 30 letras minúsculas, números, punto o guion. La contraseña, al menos 6 caracteres.</p>
+    <p class="err" id="usrErr"></p>
+    <div class="foot"><div class="r">
+      <button class="btn" type="button" data-close>Cancelar</button>
+      <button class="btn primary" type="submit" id="usrSave">Guardar</button>
+    </div></div>
+  </form>
+</dialog>
+
+<!-- Modal cambiar contraseña -->
+<dialog id="dlgPw">
+  <form class="dlg" id="formPw" novalidate>
+    <h2>Cambiar mi contraseña</h2>
+    <label class="f">Contraseña actual<input id="pwOld" type="password" autocomplete="current-password"></label>
+    <div class="grid2">
+      <label class="f">Nueva contraseña<input id="pwNew" type="password" autocomplete="new-password"></label>
+      <label class="f">Repetir nueva<input id="pwNew2" type="password" autocomplete="new-password"></label>
+    </div>
+    <p class="err" id="pwErr"></p>
+    <div class="foot"><div class="r">
+      <button class="btn" type="button" data-close>Cancelar</button>
+      <button class="btn primary" type="submit" id="pwSave">Cambiar</button>
+    </div></div>
+  </form>
+</dialog>
+
+<datalist id="dlProductos"></datalist>
+<datalist id="dlVehMarcas"></datalist>
+<div class="toast" id="toast" hidden></div>
+
+<div class="updbar" id="updBar" hidden><span id="updTxt"></span><button class="btn sm primary" id="updBtn" type="button" hidden>Reiniciar y actualizar</button></div>
+
+<div class="offline" id="offline" hidden role="alertdialog" aria-live="assertive">
+  <div class="offcard">
+    <div class="officon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/><path d="M3 3l18 18"/></svg>
+    </div>
+    <h2>Sin conexión a internet</h2>
+    <p>La app se bloqueó para que no se cargue nada que no quede guardado. Se desbloquea sola cuando vuelva la conexión.</p>
+    <p class="hint" id="offRetry">Reintentando…</p>
+  </div>
+</div>
+
+<script src="../node_modules/@supabase/supabase-js/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
