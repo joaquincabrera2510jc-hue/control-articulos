@@ -1,0 +1,72 @@
+# Arma el instalador de Windows y lo publica como "Release" en GitHub.
+# Las apps instaladas buscan ahí las versiones nuevas y se actualizan solas.
+#
+# Para publicar una versión nueva: subí el número de "version" en package.json
+# (por ejemplo 1.0.0 -> 1.0.1) y guardá el cambio. Esto se ejecuta solo.
+# También se puede lanzar a mano: pestaña Actions > "Publicar versión" > Run workflow.
+name: Publicar versión
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["package.json", "src/**", "main.js", "preload.js", "build/**", ".github/**"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Revisar si esta versión ya se publicó
+        id: version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V=$(node -p "require('./package.json').version")
+          echo "numero=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" > /dev/null 2>&1; then
+            echo "existe=si" >> "$GITHUB_OUTPUT"
+            echo "::warning::La versión $V ya estaba publicada. Para publicar cambios, subí el número de version en package.json."
+          else
+            echo "existe=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Revisar configuración de Supabase
+        if: steps.version.outputs.existe == 'no'
+        shell: bash
+        run: |
+          if grep -q "TU-PROYECTO\|PEGAR-ACA" src/config.js; then
+            echo "::error::Falta completar src/config.js con la URL y la clave anon de Supabase."; exit 1
+          fi
+
+      - name: Preparar imágenes
+        if: steps.version.outputs.existe == 'no'
+        shell: bash
+        run: |
+          for f in $(git ls-files '*.b64'); do base64 -d "$f" > "${f%.b64}"; done
+          python -m pip install --quiet pillow
+          python build/make_icon.py
+          ls -la build src
+
+      - name: Instalar dependencias
+        if: steps.version.outputs.existe == 'no'
+        run: npm install --no-audit --no-fund
+
+      - name: Armar instalador y publicar
+        if: steps.version.outputs.existe == 'no'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --publish always -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }}
