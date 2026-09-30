@@ -99,7 +99,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:60
 .seg input{position:absolute;opacity:0;width:1px;height:1px}
 .seg label:has(input:checked){background:var(--fg);color:var(--bg)}
 .items{display:flex;flex-direction:column;gap:6px}
-.itemrow{display:grid;grid-template-columns:1fr 84px 34px;gap:6px}
+.itemrow{display:grid;grid-template-columns:minmax(120px,170px) 1fr 76px 34px;gap:6px}
 .dlg .foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
 .dlg .foot .r{display:flex;gap:8px;margin-left:auto}
 .err{color:var(--bad);font-weight:500;min-height:1em;margin:0}
