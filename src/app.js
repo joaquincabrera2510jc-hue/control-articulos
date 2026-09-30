@@ -3,11 +3,11 @@
 
 const CATS=["Motor","Frenos","Suspensión y dirección","Eléctrico","Filtros","Lubricantes y fluidos","Transmisión","Refrigeración","Carrocería","Neumáticos","Otros"];
 const ESTADOS={
-  cliente:["Pendiente","En preparación","Listo para retirar","Entregado","Cancelado"],
+  cliente:["En camino","En taller","Entregado"],
   proveedor:["Solicitado","Confirmado","En camino","Recibido","Cancelado"]
 };
 const FINAL={cliente:"Entregado",proveedor:"Recibido"};
-const PILL={"Pendiente":"p-open","Solicitado":"p-open","En preparación":"p-prog","Confirmado":"p-prog","En camino":"p-prog","Listo para retirar":"p-ready","Entregado":"p-done","Recibido":"p-done","Cancelado":"p-cancel"};
+const PILL={"Pendiente":"p-open","Solicitado":"p-open","En preparación":"p-prog","Confirmado":"p-prog","En camino":"p-prog","Listo para retirar":"p-ready","En taller":"p-ready","Entregado":"p-done","Recibido":"p-done","Cancelado":"p-cancel"};
 const ROLES={admin:"Administrador",operador:"Operador",taller:"Taller",lectura:"Solo consulta"};
 const TIPO={entrada:"Entrada",salida:"Salida",ajuste:"Ajuste",anulacion:"Anulación"};
 const VEH_MARCAS=["Audi","BMW","BYD","Chery","Chevrolet","Citroën","DFSK","Dodge","Fiat","Ford","Geely","Great Wall","Haval","Honda","Hyundai","Isuzu","JAC","Jeep","Kia","Lifan","Mahindra","Mazda","Mercedes-Benz","Mitsubishi","Nissan","Peugeot","RAM","Renault","Subaru","Suzuki","Toyota","Volkswagen","Volvo"];
@@ -172,7 +172,7 @@ function renderPedidos(){
   const hoy=new Date().toISOString().slice(0,10);
   box.innerHTML=`<div class="orders">${list.map(o=>{
     const late=abierto(o)&&o.fecha_estimada&&o.fecha_estimada<hoy;
-    const est=ESTADOS[o.tipo],i=est.indexOf(o.estado),next=abierto(o)&&i<est.length-2?est[i+1]:null;
+    const est=ESTADOS[o.tipo],i=est.indexOf(o.estado),next=abierto(o)&&est[i+1]&&est[i+1]!=="Cancelado"?est[i+1]:null;
     return `<article class="order" data-o="${o.id}" tabindex="0">
       <div class="hd"><div><div class="tag">${o.tipo==="cliente"?"Cliente":"Proveedor"} · <span class="no">${esc(o.numero)}</span></div><div class="who">${esc(o.contacto)}</div></div><span class="pill ${PILL[o.estado]||""}">${esc(o.estado)}</span></div>
       <ul>${(o.items||[]).slice(0,4).map(it=>`<li>${+it.cantidad||0} × ${esc(it.nombre)}</li>`).join("")}${(o.items||[]).length>4?`<li>y ${o.items.length-4} más…</li>`:""}</ul>
