@@ -285,7 +285,7 @@ const tipoSel=()=>document.querySelector("input[name=ptipo]:checked").value;
 function syncPedTipo(){
   const t=tipoSel();$("#lblContacto").textContent=t==="cliente"?"Cliente *":"Proveedor *";
   $("#oEstado").innerHTML=ESTADOS[t].map(s=>`<option>${esc(s)}</option>`).join("");
-  $("#oHint").textContent=t==="cliente"?"Al pasar a “Entregado”, se descuenta del stock cada artículo elegido de la lista.":"Al pasar a “Recibido”, se suma al stock cada artículo elegido de la lista.";
+  $("#oHint").textContent=t==="cliente"?"Al pasar a “Entregado”, se descuenta del stock cada artículo elegido de la lista. Lo escrito a mano que no está en stock no descuenta nada.":"Al pasar a “Recibido”, se suma al stock. Si escribís un artículo que todavía no existe, se crea solo al recibirlo.";
 }
 document.querySelectorAll("input[name=ptipo]").forEach(r=>r.onchange=syncPedTipo);
 function itemRow(it={}){
