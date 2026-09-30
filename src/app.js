@@ -164,7 +164,7 @@ function renderStock(){
 }
 function renderPedidos(){
   const q=norm($("#qPed").value),soloAb=$("#fAbiertos").checked;
-  const list=pedidos.filter(o=>(fTipo==="todos"||o.tipo===fTipo)&&(!soloAb||abierto(o))&&(!q||norm([o.numero,o.contacto,o.telefono,o.notas,...(o.items||[]).map(i=>i.nombre)].join(" ")).includes(q)))
+  const list=pedidos.filter(o=>(fTipo==="todos"||o.tipo===fTipo)&&(!soloAb||abierto(o))&&(!q||norm([o.numero,o.contacto,o.telefono,o.notas,...(o.items||[]).map(i=>i.nombre+" "+(i.codigo||""))].join(" ")).includes(q)))
     .sort((a,b)=>(abierto(b)-abierto(a))||String(b.creado).localeCompare(String(a.creado)));
   const box=$("#pedBody");
   if(!pedidos.length){box.innerHTML=`<div class="empty"><strong>No hay pedidos todavía</strong>Creá un pedido de cliente o una compra a proveedor con “+ Nuevo pedido”. Al marcarlo como Entregado o Recibido, el stock se descuenta o se suma solo.</div>`;return}
@@ -175,7 +175,7 @@ function renderPedidos(){
     const est=ESTADOS[o.tipo],i=est.indexOf(o.estado),next=abierto(o)&&est[i+1]&&est[i+1]!=="Cancelado"?est[i+1]:null;
     return `<article class="order" data-o="${o.id}" tabindex="0">
       <div class="hd"><div><div class="tag">${o.tipo==="cliente"?"Cliente":"Proveedor"} · <span class="no">${esc(o.numero)}</span></div><div class="who">${esc(o.contacto)}</div></div><span class="pill ${PILL[o.estado]||""}">${esc(o.estado)}</span></div>
-      <ul>${(o.items||[]).slice(0,4).map(it=>`<li>${+it.cantidad||0} × ${esc(it.nombre)}</li>`).join("")}${(o.items||[]).length>4?`<li>y ${o.items.length-4} más…</li>`:""}</ul>
+      <ul>${(o.items||[]).slice(0,4).map(it=>`<li>${+it.cantidad||0} × ${it.codigo?`<span class="code">${esc(it.codigo)}</span> · `:""}${esc(it.nombre)}</li>`).join("")}${(o.items||[]).length>4?`<li>y ${o.items.length-4} más…</li>`:""}</ul>
       <div class="ft"><span>Creado ${fmtD(o.creado)}${o.fecha_estimada?` · <span class="${late?"late":""}">${late?"Atrasado: ":"Estimado: "}${fmtD(o.fecha_estimada+"T12:00")}</span>`:""}</span>
       ${next&&canWrite?`<button class="btn sm" data-next="${o.id}" data-e="${esc(next)}">→ ${esc(next)}</button>`:""}</div></article>`}).join("")}</div>`;
   box.querySelectorAll(".order").forEach(c=>{c.onclick=e=>{if(e.target.closest("[data-next]"))return;openPed(c.dataset.o)};c.onkeydown=e=>{if(e.key==="Enter")openPed(c.dataset.o)}});
@@ -291,7 +291,10 @@ document.querySelectorAll("input[name=ptipo]").forEach(r=>r.onchange=syncPedTipo
 function itemRow(it={}){
   const d=document.createElement("div");d.className="itemrow";
   const a=it.articulo_id&&artDe(it.articulo_id);
-  d.innerHTML=`<input list="dlProductos" class="iNom" placeholder="Buscá un artículo o escribí uno nuevo" value="${esc(a?label(a):it.nombre||"")}"><input class="iCant" type="number" min="1" step="1" value="${+it.cantidad||1}" aria-label="Cantidad"><button type="button" class="btn sm" aria-label="Quitar">✕</button>`;
+  d.innerHTML=`<input class="iCod" placeholder="Código / N° de parte" aria-label="Código o número de parte" value="${esc(a?a.codigo||it.codigo||"":it.codigo||"")}"><input list="dlProductos" class="iNom" placeholder="Buscá un artículo o escribí uno nuevo" value="${esc(a?label(a):it.nombre||"")}"><input class="iCant" type="number" min="1" step="1" value="${+it.cantidad||1}" aria-label="Cantidad"><button type="button" class="btn sm" aria-label="Quitar">✕</button>`;
+  const cod=d.querySelector(".iCod"),nom=d.querySelector(".iNom");
+  nom.addEventListener("input",()=>{const x=articulos.find(y=>label(y)===nom.value.trim());if(x&&x.codigo)cod.value=x.codigo});
+  cod.addEventListener("change",()=>{const v=norm(cod.value.trim());const x=v&&articulos.find(y=>y.codigo&&norm(y.codigo)===v);if(x)nom.value=label(x)});
   d.querySelector("button").onclick=()=>d.remove();$("#oItems").appendChild(d);
 }
 $("#oAddItem").onclick=()=>{itemRow();$("#oItems").lastChild.querySelector("input").focus()};
@@ -315,9 +318,11 @@ $("#pedDel").onclick=async()=>{
   try{await q(sb.from("pedidos").delete().eq("id",editPed.id));$("#dlgPed").close();await cargar("pedidos");renderAll();toast("Pedido eliminado")}catch(e){$("#pedErr").textContent=errMsg(e)}
 };
 function readItems(){
-  return [...$("#oItems").children].map(r=>{const txt=r.querySelector(".iNom").value.trim(),c=Math.floor(+r.querySelector(".iCant").value||0);
-    if(!txt)return null;const a=articulos.find(x=>label(x)===txt)||articulos.find(x=>x.codigo&&norm(x.codigo)===norm(txt));
-    return a?{articulo_id:a.id,nombre:a.nombre,codigo:a.codigo||"",cantidad:c}:{articulo_id:"",nombre:txt,codigo:"",cantidad:c}}).filter(Boolean);
+  return [...$("#oItems").children].map(r=>{const txt=r.querySelector(".iNom").value.trim(),cod=r.querySelector(".iCod").value.trim(),c=Math.floor(+r.querySelector(".iCant").value||0);
+    if(!txt&&!cod)return null;
+    const porCod=v=>v&&articulos.find(x=>x.codigo&&norm(x.codigo)===norm(v));
+    const a=(txt&&articulos.find(x=>label(x)===txt))||porCod(cod)||(!cod&&porCod(txt));
+    return a?{articulo_id:a.id,nombre:a.nombre,codigo:a.codigo||cod,cantidad:c}:{articulo_id:"",nombre:txt||cod,codigo:cod,cantidad:c}}).filter(Boolean);
 }
 async function cambiarEstado(id,estado){
   try{const p=await q(sb.rpc("cambiar_estado_pedido",{p_pedido:id,p_estado:estado}));
@@ -502,7 +507,7 @@ function makeXlsx(sheets){
 }
 function buildWorkbook(){
   const arts=[...articulos].sort((a,b)=>norm(a.nombre).localeCompare(norm(b.nombre))).map(a=>[a.codigo||"",a.nombre,a.marca||"",a.veh_marca||"",a.veh_modelo||"",a.categoria||"",a.ubicacion||"",+a.stock||0,fmtDT(a.actualizado)]);
-  const peds=[...pedidos].sort((a,b)=>String(b.creado).localeCompare(String(a.creado))).map(o=>[o.numero,o.tipo==="cliente"?"Cliente":"Proveedor",o.contacto,o.telefono||"",o.estado,fmtD(o.creado),o.fecha_estimada?fmtD(o.fecha_estimada+"T12:00"):"",(o.items||[]).map(i=>i.cantidad+" x "+i.nombre).join("; "),o.stock_aplicado?"Sí":"No",o.notas||""]);
+  const peds=[...pedidos].sort((a,b)=>String(b.creado).localeCompare(String(a.creado))).map(o=>[o.numero,o.tipo==="cliente"?"Cliente":"Proveedor",o.contacto,o.telefono||"",o.estado,fmtD(o.creado),o.fecha_estimada?fmtD(o.fecha_estimada+"T12:00"):"",(o.items||[]).map(i=>i.cantidad+" x "+(i.codigo?"["+i.codigo+"] ":"")+i.nombre).join("; "),o.stock_aplicado?"Sí":"No",o.notas||""]);
   const movs=movsConArticulo().map(m=>[fmtDT(m.fecha),m.art.codigo||"",m.art.nombre,(TIPO[m.tipo]||m.tipo)+(m.anulado_fecha?" (anulada)":""),+m.cantidad||0,+m.antes||0,+m.despues||0,m.motivo||"",m.pedido||"",quien(m.por)]);
   return makeXlsx([
     {name:"Artículos",cols:["Código","Artículo","Marca artículo","Marca vehículo","Modelo vehículo","Categoría","Ubicación","Stock","Actualizado"],rows:arts},
