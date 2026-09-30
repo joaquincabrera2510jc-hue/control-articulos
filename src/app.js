@@ -99,7 +99,7 @@ async function traerTodo(tabla,orden,asc=true){
 async function cargar(tabla){
   if(tabla==="articulos")articulos=await traerTodo("articulos","nombre");
   if(tabla==="perfiles")perfiles=await traerTodo("perfiles","nombre");
-  if(tabla==="pedidos"&&!esTaller())pedidos=await traerTodo("pedidos","creado",false);
+  if(tabla==="pedidos")pedidos=await traerTodo("pedidos","creado",false);
   if(tabla==="movimientos"){
     let qm=sb.from("movimientos").select("*").order("fecha",{ascending:false});
     if(esTaller())qm=qm.eq("por",me).gte("fecha",new Date(Date.now()-48*3600e3).toISOString());
@@ -163,23 +163,26 @@ function renderStock(){
   box.querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>openProd(b.dataset.ed));
 }
 function renderPedidos(){
-  const q=norm($("#qPed").value),soloAb=$("#fAbiertos").checked;
-  const list=pedidos.filter(o=>(fTipo==="todos"||o.tipo===fTipo)&&(!soloAb||abierto(o))&&(!q||norm([o.numero,o.contacto,o.telefono,o.notas,...(o.items||[]).map(i=>i.nombre+" "+(i.codigo||""))].join(" ")).includes(q)))
+  const q=norm($("#qPed").value),soloAb=$("#fAbiertos").checked,taller=esTaller();
+  const list=pedidos.filter(o=>(taller?o.tipo==="cliente"&&o.estado==="En taller":(fTipo==="todos"||o.tipo===fTipo)&&(!soloAb||abierto(o)))&&(!q||norm([o.numero,o.contacto,o.telefono,o.notas,...(o.items||[]).map(i=>i.nombre+" "+(i.codigo||""))].join(" ")).includes(q)))
     .sort((a,b)=>(abierto(b)-abierto(a))||String(b.creado).localeCompare(String(a.creado)));
   const box=$("#pedBody");
+  if(taller&&!list.length){box.innerHTML=`<div class="empty"><strong>No hay vehículos en el taller</strong>Cuando un pedido de cliente pase a “En taller”, aparece acá para que lo marques como Entregado.</div>`;return}
   if(!pedidos.length){box.innerHTML=`<div class="empty"><strong>No hay pedidos todavía</strong>Creá un pedido de cliente o una compra a proveedor con “+ Nuevo pedido”. Al marcarlo como Entregado o Recibido, el stock se descuenta o se suma solo.</div>`;return}
   if(!list.length){box.innerHTML=`<div class="empty"><strong>Nada que mostrar con estos filtros</strong>Desmarcá “Solo abiertos” para ver los pedidos cerrados.</div>`;return}
   const hoy=new Date().toISOString().slice(0,10);
   box.innerHTML=`<div class="orders">${list.map(o=>{
     const late=abierto(o)&&o.fecha_estimada&&o.fecha_estimada<hoy;
-    const est=ESTADOS[o.tipo],i=est.indexOf(o.estado),next=abierto(o)&&est[i+1]&&est[i+1]!=="Cancelado"?est[i+1]:null;
+    const est=ESTADOS[o.tipo],i=est.indexOf(o.estado),next=taller?"Entregado":abierto(o)&&est[i+1]&&est[i+1]!=="Cancelado"?est[i+1]:null;
     return `<article class="order" data-o="${o.id}" tabindex="0">
       <div class="hd"><div><div class="tag">${o.tipo==="cliente"?"Cliente":"Proveedor"} · <span class="no">${esc(o.numero)}</span></div><div class="who">${esc(o.contacto)}</div></div><span class="pill ${PILL[o.estado]||""}">${esc(o.estado)}</span></div>
-      <ul>${(o.items||[]).slice(0,4).map(it=>`<li>${+it.cantidad||0} × ${it.codigo?`<span class="code">${esc(it.codigo)}</span> · `:""}${esc(it.nombre)}</li>`).join("")}${(o.items||[]).length>4?`<li>y ${o.items.length-4} más…</li>`:""}</ul>
-      <div class="ft"><span>Creado ${fmtD(o.creado)}${o.fecha_estimada?` · <span class="${late?"late":""}">${late?"Atrasado: ":"Estimado: "}${fmtD(o.fecha_estimada+"T12:00")}</span>`:""}</span>
+      <ul>${(o.items||[]).slice(0,taller?99:4).map(it=>`<li>${+it.cantidad||0} × ${it.codigo?`<span class="code">${esc(it.codigo)}</span> · `:""}${esc(it.nombre)}</li>`).join("")}${!taller&&(o.items||[]).length>4?`<li>y ${o.items.length-4} más…</li>`:""}</ul>
+      ${taller&&o.notas?`<div class="hint">${esc(o.notas)}</div>`:""}<div class="ft"><span>Creado ${fmtD(o.creado)}${o.fecha_estimada?` · <span class="${late?"late":""}">${late?"Atrasado: ":"Estimado: "}${fmtD(o.fecha_estimada+"T12:00")}</span>`:""}</span>
       ${next&&canWrite?`<button class="btn sm" data-next="${o.id}" data-e="${esc(next)}">→ ${esc(next)}</button>`:""}</div></article>`}).join("")}</div>`;
-  box.querySelectorAll(".order").forEach(c=>{c.onclick=e=>{if(e.target.closest("[data-next]"))return;openPed(c.dataset.o)};c.onkeydown=e=>{if(e.key==="Enter")openPed(c.dataset.o)}});
-  box.querySelectorAll("[data-next]").forEach(b=>b.onclick=async()=>{b.disabled=true;await cambiarEstado(b.dataset.next,b.dataset.e);b.disabled=false});
+  if(!taller)box.querySelectorAll(".order").forEach(c=>{c.onclick=e=>{if(e.target.closest("[data-next]"))return;openPed(c.dataset.o)};c.onkeydown=e=>{if(e.key==="Enter")openPed(c.dataset.o)}});
+  box.querySelectorAll("[data-next]").forEach(b=>b.onclick=async()=>{
+    if(taller&&!b.dataset.arm){b.dataset.arm="1";b.textContent="Tocá de nuevo para confirmar";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="→ Entregado"}},4000);return}
+    b.disabled=true;await cambiarEstado(b.dataset.next,b.dataset.e);b.disabled=false});
 }
 function movsConArticulo(){return movimientos.map(m=>({...m,art:artDe(m.articulo_id)||{nombre:"(artículo borrado)",codigo:""}}))}
 function puedeAnular(m){
@@ -442,7 +445,7 @@ $("#formAuth").onsubmit=async e=>{
 };
 async function entrar(p){
   ses={id:p.id,usuario:p.usuario,nombre:p.nombre,rol:p.rol};me=p.id;
-  $("#auth").hidden=true;$("#app").hidden=false;lastAct=Date.now();
+  $("#auth").hidden=true;$("#app").hidden=false;lastAct=Date.now();tab="stock";
   aplicarPermisos();
   $("#stockBody").innerHTML='<div class="empty"><strong>Cargando…</strong></div>';
   await recargarTodo();suscribir();
@@ -462,11 +465,11 @@ function verificarMiPerfil(){
 function aplicarPermisos(){
   canWrite=!!ses&&ses.rol!=="lectura";
   const taller=esTaller(),admin=esAdmin();
-  $("#btnNuevo").disabled=!canWrite;$("#btnPedido").disabled=!canWrite;$("#btnNuevo").hidden=taller||!canWrite;$("#btnPedido").hidden=!canWrite;
-  $("#stats").hidden=taller;$("#tab-pedidos").hidden=taller;$("#tab-movs").hidden=taller;$("#tab-usuarios").hidden=!admin;$("#btnExcel").hidden=taller;
-  $("#appSub").textContent=taller?"Buscá el artículo y dale salida. Si te equivocás de pieza, deshacela abajo.":"Stock, pedidos de clientes y compras a proveedores, compartido en tiempo real.";
+  $("#btnNuevo").disabled=!canWrite;$("#btnPedido").disabled=!canWrite;$("#btnNuevo").hidden=taller||!canWrite;$("#btnPedido").hidden=!canWrite||taller;
+  $("#stats").hidden=taller;$("#tab-pedidos").textContent=taller?"En taller":"Pedidos";$("#fTipo").hidden=taller;$("#fAbiertos").closest("label").hidden=taller;$("#qPed").placeholder=taller?"Buscar por número, cliente o artículo…":"Buscar por número, cliente, proveedor o artículo…";$("#tab-movs").hidden=taller;$("#tab-usuarios").hidden=!admin;$("#btnExcel").hidden=taller;
+  $("#appSub").textContent=taller?"Buscá el artículo y dale salida. Si te equivocás de pieza, deshacela abajo. En “En taller” marcás los pedidos entregados.":"Stock, pedidos de clientes y compras a proveedores, compartido en tiempo real.";
   $("#whoName").textContent=ses.nombre;$("#whoRol").textContent=ROLES[ses.rol]||ses.rol;
-  if((tab==="usuarios"&&!admin)||(taller&&tab!=="stock"))setTab("stock");else setTab(tab);
+  if((tab==="usuarios"&&!admin)||(taller&&tab!=="stock"&&tab!=="pedidos"))setTab("stock");else setTab(tab);
   renderAll();
 }
 let lastAct=Date.now();
